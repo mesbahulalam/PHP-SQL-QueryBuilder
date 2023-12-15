@@ -49,4 +49,4 @@ class QueryBuilder {
 $query = new QueryBuilder('users'); // "FROM users"
 $query = new QueryBuilder('users')->select(); // "SELECT * FROM users"
 $query = new QueryBuilder('users')->select()->where('id', 1); // "SELECT * FROM users WHERE id = 1"
-$query = new QueryBuilder('users')->select()->where(['role' => 'admin', 'status' => 'active']); // "SELECT * FROM users WHERE role = 'admin' AND status = 'active'"
+$query = new QueryBuilder('users')->select()->massiveWhere(['role' => 'admin', 'status' => 'active']); // "SELECT * FROM users WHERE role = 'admin' AND status = 'active'"

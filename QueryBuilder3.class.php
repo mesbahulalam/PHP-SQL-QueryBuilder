@@ -149,11 +149,38 @@ class QueryBuilder
      * @param mixed $value Value for the condition
      * @return $this
      */
+	/*
 	public function where($column, $value = null){
 		$this->where[$column] = $value;
 		return $this;
 	}
-
+	*/
+    /**
+     * Adds a WHERE condition, supporting simple, complex, and logical conditions.
+     *
+     * @param mixed $arg1 Column name, condition array, or raw SQL
+     * @param mixed $arg2 Value for the condition or operator (optional)
+     * @param mixed $arg3 Value for the condition if $arg2 is an operator (optional)
+     * @return $this
+     */
+    public function where($arg1, $arg2 = null, $arg3 = null) {
+        if (is_array($arg1)) {
+            // Handle complex conditions like ['column', 'operator', 'value']
+            $this->where[] = $arg1;
+        } elseif (func_num_args() === 1) {
+            // Handle raw SQL conditions
+            $this->where[] = $arg1;
+        } else {
+            // Handle simple conditions like 'column', 'value'
+            $condition = [$arg1, '=', $arg2];
+            if ($arg3 !== null) {
+                // Handle conditions with an operator like 'column', 'operator', 'value'
+                $condition = [$arg1, $arg2, $arg3];
+            }
+            $this->where[] = $condition;
+        }
+        return $this;
+    }
     /**
      * Adds multiple WHERE conditions
      *
@@ -194,11 +221,35 @@ class QueryBuilder
      *
      * @return $this
      */
-	public function count(){
-		$this->is_count = true;
-		return $this;
-	}
+    public function count(){
+        $this->is_count = true;
+        return $this;
+    }
 
+	
+    /**
+     * Adds a MIN function to the SELECT query.
+     *
+     * @param string $column Column to find the minimum value of
+     * @return $this
+     */
+    public function min($column) {
+        $this->queryType = 'SELECT';
+        $this->selectables[] = "MIN($column) AS min_value";
+        return $this;
+    }
+
+    /**
+     * Adds a MAX function to the SELECT query.
+     *
+     * @param string $column Column to find the maximum value of
+     * @return $this
+     */
+    public function max($column) {
+        $this->queryType = 'SELECT';
+        $this->selectables[] = "MAX($column) AS max_value";
+        return $this;
+    }
     /**
      * Sets the OFFSET for query results
      *
@@ -325,7 +376,7 @@ class QueryBuilder
         return $sql;
     }
 	
-    private function buildWhere() {
+/*    private function buildWhere() {
         if (empty($this->where)) {
             return '';
         }
@@ -339,6 +390,31 @@ class QueryBuilder
             }
         }
         return ' WHERE ' . implode(' AND ', $whereParts);
+    }
+    */
+	
+    private function buildWhere() {
+        if (empty($this->where)) {
+            return '';
+        }
+        $whereParts = [];
+        foreach ($this->where as $condition) {
+            if (is_array($condition)) {
+                // Handle conditions like ['column', 'operator', 'value']
+                if (in_array(strtoupper($condition[1]), ['IS NULL', 'IS NOT NULL', 'IN', 'NOT IN'])) {
+                    $whereParts[] = "$condition[0] $condition[1]";
+                } elseif (strtoupper($condition[1]) === 'IN' || strtoupper($condition[1]) === 'NOT IN') {
+                    $whereParts[] = "$condition[0] $condition[1] ($condition[2])";
+                } else {
+                    $whereParts[] = "$condition[0] $condition[1] ?";
+                    $this->bindings[] = $condition[2];
+                }
+            } else {
+                // Handle raw SQL conditions
+                $whereParts[] = $condition;
+            }
+        }
+        return ' WHERE ' . implode(' ', $whereParts);
     }
 
     private function buildHaving() {
